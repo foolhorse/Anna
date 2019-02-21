@@ -4,51 +4,116 @@ import android.app.Activity
 import android.app.Application
 import android.content.Context
 import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
+import android.os.Message
 import android.support.v4.app.Fragment
 import android.support.v4.app.FragmentManager
 import android.view.View
+import me.machao.android.anna.library.data.Event
+import me.machao.android.anna.library.data.EventType
 import java.lang.ref.WeakReference
 
 /**
  * Date  2019/2/19
  * @author charliema
  */
-class Anna {
+class Anna(
+    private val application: Application,
+    private val host: String?,
+    private val path: String?,
+    internal val strategy: Strategy,
+    private val dispatcher: Dispatcher
+) {
 
     companion object {
 
         @Volatile
         private var singleton: Anna? = null
 
-        fun getInstance(context: Context): Anna {
+        fun init(builder: Anna.Builder) {
             if (singleton == null) {
                 synchronized(Anna) {
                     if (singleton == null) {
-                        singleton = Anna.Builder(context).build()
+                        singleton = builder.build()
                     }
                 }
             }
+        }
+
+        fun getInstance(): Anna {
+            if (singleton == null) {
+                throw IllegalStateException("Anna need call init first")
+            }
             return singleton!!
         }
+
+        val HANDLER: Handler = object : Handler(Looper.getMainLooper()) {
+            override fun handleMessage(msg: Message) {
+                when (msg.what) {
+                    REQUEST_COMPLETE -> {
+                        val event = msg.obj as Event
+                        log("target got garbage collected")
+                    }
+                    else -> throw AssertionError("Unknown handler message received: " + msg.what)
+                }
+            }
+        }
+
+        fun newEvent(msg: String) {
+            getInstance().newEvent(msg)
+        }
+
     }
 
-    private val application: Application
+    private fun newAppCreateEvent(application: Application) {
+        val event = Event(EventType.APP_CREATE, application.packageName, null)
+        dispatcher.dispatchSubmit(event)
+    }
 
-    private val host: String?
-    private val path: String?
+    private fun newAppDestroyEvent(application: Application) {
 
-    private val strategy: Strategy
+
+    }
+
+    private fun newAppStartEvent(activity: Activity) {
+
+    }
+
+    private fun newAppStopEvent(activity: Activity) {
+
+
+    }
+
+    private fun newPageStartEvent(activity: Activity) {
+
+    }
+
+    private fun newPageStopEvent(activity: Activity) {
+
+    }
+
+    private fun newPageStartEvent(fragment: Fragment) {
+
+    }
+
+    private fun newPageStopEvent(fragment: Fragment) {
+
+    }
+
+    private fun newEvent(msg: String) {
+
+    }
+
 
     private var activityRefList = mutableListOf<WeakReference<Activity>>()
 
 
-    private constructor(application: Application, host: String?, path: String?, strategy: Strategy) {
-        this@Anna.application = application
-        this@Anna.host = host
-        this@Anna.path = path
-        this@Anna.strategy = strategy
+    init {
 
-        var fragmentLifecycleCallbacks = object : android.support.v4.app.FragmentManager.FragmentLifecycleCallbacks() {
+        newAppCreateEvent(this@Anna.application)
+
+        val fragmentLifecycleCallbacks = object : android.support.v4.app.FragmentManager.FragmentLifecycleCallbacks() {
 
             override fun onFragmentPreAttached(fm: FragmentManager, f: Fragment, context: Context) {
                 super.onFragmentPreAttached(fm, f, context)
@@ -81,7 +146,7 @@ class Anna {
             override fun onFragmentStarted(fm: FragmentManager, f: Fragment) {
                 super.onFragmentStarted(fm, f)
                 if (f.isVisible) {
-                    Anna.newPageStartEvent(f)
+                    newPageStartEvent(f)
                 }
             }
 
@@ -96,7 +161,7 @@ class Anna {
             override fun onFragmentStopped(fm: FragmentManager, f: Fragment) {
                 super.onFragmentStopped(fm, f)
                 if (f.isVisible) {
-                    Anna.newPageStopEvent(f)
+                    newPageStopEvent(f)
                 }
             }
 
@@ -109,13 +174,12 @@ class Anna {
                 super.onFragmentDestroyed(fm, f)
             }
 
-
             override fun onFragmentDetached(fm: FragmentManager, f: Fragment) {
                 super.onFragmentDetached(fm, f)
             }
         }
 
-        this@Anna.application.registerActivityLifecycleCallbacks(object : Application.ActivityLifecycleCallbacks() {
+        this@Anna.application.registerActivityLifecycleCallbacks(object : Application.ActivityLifecycleCallbacks {
 
 
             override fun onActivityCreated(activity: Activity?, savedInstanceState: Bundle?) {
@@ -133,10 +197,10 @@ class Anna {
                     return
                 }
                 if (activityRefList.isEmpty()) {
-                    Anna.newAppStartEvent(activity)
+                    newAppStartEvent(activity)
                 }
                 activityRefList.add(WeakReference(activity))
-                Anna.newPageStartEvent(activity)
+                newPageStartEvent(activity)
             }
 
             override fun onActivitySaveInstanceState(activity: Activity?, outState: Bundle?) {
@@ -152,7 +216,7 @@ class Anna {
                 if (activity == null) {
                     return
                 }
-                Anna.newPageStopEvent(activity)
+                newPageStopEvent(activity)
 
                 val needRemoveRefList = mutableListOf<WeakReference<Activity>>()
                 for (ref in activityRefList) {
@@ -163,7 +227,7 @@ class Anna {
                 activityRefList.removeAll(needRemoveRefList)
 
                 if (activityRefList.isEmpty()) {
-                    Anna.newAppStopEvent(activity)
+                    newAppStopEvent(activity)
                 }
 
             }
@@ -177,12 +241,13 @@ class Anna {
         })
     }
 
-    class Builder(context: Context) {
-        val application = context.applicationContext as Application
+    class Builder(application: Application) {
+        private val application = application
 
         private var host: String? = null
         private var path: String? = null
         private var strategy: Strategy? = null
+        private var uploader: Uploader? = null
 
         fun server(host: String, path: String): Builder {
             this@Builder.host = host
@@ -195,8 +260,15 @@ class Anna {
             return this
         }
 
+        fun uploader(uploader: Uploader) {
+            this@Builder.uploader = uploader
+        }
+
         fun build(): Anna {
-            return Anna(application, host, path, strategy ?: Strategy.DEBUG)
+            val dispatcher =
+                Dispatcher(application.applicationContext, uploader ?: UrlConnectionUploader(), HANDLER)
+
+            return Anna(application, host, path, strategy ?: Strategy.DEBUG, dispatcher)
         }
 
     }

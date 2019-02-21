@@ -4,16 +4,13 @@ package me.machao.android.anna.library.data
  * Date  2019/2/21
  * @author charliema
  */
-class Event {
+class Event(
 
-    var timestamp: Long
+    var eventType: EventType,
 
-    var eventType: EventType
-
-
-    var appName:String
-    var pageName: String
-
-
+    var appName: String,
+    var pageName: String?
+) {
+    val timestamp: Long = System.currentTimeMillis()
 
 }
