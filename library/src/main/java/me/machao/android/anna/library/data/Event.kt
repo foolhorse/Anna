@@ -9,7 +9,8 @@ class Event(
     var eventType: EventType,
 
     var appName: String,
-    var pageName: String?
+    var pageName: String?,
+    var view: String?
 ) {
     val timestamp: Long = System.currentTimeMillis()
 

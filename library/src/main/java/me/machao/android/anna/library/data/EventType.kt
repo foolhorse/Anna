@@ -34,6 +34,11 @@ enum class EventType {
     PAGE_STOP,
 
     /**
+     * click
+     */
+    CLICK,
+
+    /**
      * User-Defined
      */
     CUSTOM

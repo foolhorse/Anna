@@ -10,6 +10,7 @@ import android.os.Message
 import android.support.v4.app.Fragment
 import android.support.v4.app.FragmentManager
 import android.view.View
+import android.widget.TextView
 import me.machao.android.anna.library.data.Event
 import me.machao.android.anna.library.data.EventType
 import java.lang.ref.WeakReference
@@ -73,12 +74,12 @@ class Anna(
     }
 
     fun newAppCreateEvent(application: Application) {
-        val event = Event(EventType.APP_CREATE, application.packageName, null)
+        val event = Event(EventType.APP_CREATE, application.packageName, null, null)
         dispatcher.dispatchSubmit(event)
     }
 
     fun newAppDestroyEvent(application: Application) {
-        val event = Event(EventType.APP_DESTROY, application.packageName, null)
+        val event = Event(EventType.APP_DESTROY, application.packageName, null, null)
         dispatcher.dispatchSubmit(event)
     }
 
@@ -91,27 +92,40 @@ class Anna(
     }
 
     private fun newPageStartEvent(activity: Activity) {
-        val event = Event(EventType.PAGE_START, "", activity.localClassName)
+        val event = Event(EventType.PAGE_START, "", activity.localClassName, null)
         dispatcher.dispatchSubmit(event)
     }
 
     private fun newPageStopEvent(activity: Activity) {
-        val event = Event(EventType.PAGE_STOP, "", activity.localClassName)
+        val event = Event(EventType.PAGE_STOP, "", activity.localClassName, null)
         dispatcher.dispatchSubmit(event)
     }
 
     private fun newPageStartEvent(fragment: Fragment) {
-        val event = Event(EventType.PAGE_START, "", fragment.javaClass.simpleName)
+        val event = Event(EventType.PAGE_START, "", fragment.javaClass.simpleName, null)
         dispatcher.dispatchSubmit(event)
     }
 
     private fun newPageStopEvent(fragment: Fragment) {
-        val event = Event(EventType.PAGE_STOP, "", fragment.javaClass.simpleName)
+        val event = Event(EventType.PAGE_STOP, "", fragment.javaClass.simpleName, null)
+        dispatcher.dispatchSubmit(event)
+    }
+
+    fun newClickEvent(view: View?) {
+        if (view == null) {
+            return
+        }
+        val viewMsg = if (view is TextView) {
+            view.text.toString()
+        } else {
+            view.javaClass.name
+        }
+        val event = Event(EventType.CLICK, "", null, viewMsg)
         dispatcher.dispatchSubmit(event)
     }
 
     private fun newEvent(msg: String) {
-        val event = Event(EventType.CUSTOM, "", "")
+        val event = Event(EventType.CUSTOM, "", "", null)
         dispatcher.dispatchSubmit(event)
     }
 
@@ -195,7 +209,7 @@ class Anna(
                 if (activity == null) {
                     return
                 }
-//                attachFloatView(activity)
+                attachFloatView(activity)
                 if (activity is android.support.v4.app.FragmentActivity) {
                     activity.supportFragmentManager.registerFragmentLifecycleCallbacks(fragmentLifecycleCallbacks, true)
                 }
@@ -248,6 +262,10 @@ class Anna(
             }
 
         })
+    }
+
+    private fun attachFloatView(activity: Activity) {
+        FloatView(activity).attachActivity(activity)
     }
 
     class Builder(application: Application) {

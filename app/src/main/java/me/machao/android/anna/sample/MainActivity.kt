@@ -6,9 +6,11 @@ import android.support.design.widget.Snackbar
 import android.support.v7.app.AppCompatActivity;
 import android.view.Menu
 import android.view.MenuItem
+import android.view.View
 
 import kotlinx.android.synthetic.main.activity_main.*
 import kotlinx.android.synthetic.main.content_main.*
+import me.machao.android.anna.library.log
 
 class MainActivity : AppCompatActivity() {
 
@@ -20,6 +22,9 @@ class MainActivity : AppCompatActivity() {
         fab.setOnClickListener { view ->
             Snackbar.make(view, "Replace with your own action", Snackbar.LENGTH_LONG)
                 .setAction("Action", null).show()
+        }
+        rooot.setOnClickListener{
+            log("pppppppp")
         }
 
         btnFrag.setOnClickListener { startActivity(Intent(this, ContainerActivity::class.java)) }

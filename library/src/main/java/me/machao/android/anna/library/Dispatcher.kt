@@ -117,6 +117,7 @@ class Dispatcher(
                     })
                     pendingEventList.addAll(dbEventList)
                 }
+
             delete(AnnaDatabaseOpenHelper.TABLE_NAME)
         }
     }
