@@ -16,13 +16,8 @@ class App : Application() {
         Anna.getInstance().newAppCreateEvent(this )
     }
 
-    override fun onTerminate() {
-        super.onTerminate()
-        Anna.getInstance().newAppDestroyEvent(this)
-    }
-
     private fun initAnna() {
-        Anna.init(Anna.Builder(this).server("", "").strategy(Strategy.RELEASE))
+        Anna.init(Anna.Builder(this).server("http://foo.bar", "").strategy(Strategy.RELEASE).uploadThreshold(10))
     }
 
 }

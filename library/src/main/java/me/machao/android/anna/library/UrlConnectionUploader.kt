@@ -17,31 +17,36 @@ class UrlConnectionUploader : Uploader {
     }
 
     override fun upload(urlStr: String, jsonStr: String) {
-        val httpURLConnection = openConnection(urlStr)
+        try {
+            val httpURLConnection = openConnection(urlStr)
 
-        httpURLConnection.doOutput = true
-        httpURLConnection.doInput = true
+            httpURLConnection.doOutput = true
+            httpURLConnection.doInput = true
 
-        httpURLConnection.requestMethod = "POST"
-        httpURLConnection.addRequestProperty("Content-Type", "application/x-www-form-urlencoded");
-        httpURLConnection.setRequestProperty("Charset", "UTF-8")
+            httpURLConnection.requestMethod = "POST"
+            httpURLConnection.addRequestProperty("Content-Type", "application/x-www-form-urlencoded");
+            httpURLConnection.setRequestProperty("Charset", "UTF-8")
 
-        val jsonByteArr = jsonStr.toByteArray()
-        httpURLConnection.setRequestProperty("Content-Length", jsonByteArr.size.toString())
+            val jsonByteArr = jsonStr.toByteArray()
+            httpURLConnection.setRequestProperty("Content-Length", jsonByteArr.size.toString())
 
-        val os = httpURLConnection.outputStream
-        os.write(jsonByteArr)
-        os.flush()
-        os.close()
-        val responseCode = httpURLConnection.responseCode
-        if (responseCode == 200) {
-            // good for now
+            val os = httpURLConnection.outputStream
+            os.write(jsonByteArr)
+            os.flush()
+            os.close()
+            val responseCode = httpURLConnection.responseCode
+            if (responseCode == 200) {
+                // good for now
+            } else {
+                httpURLConnection.disconnect()
+                throw IOException(responseCode.toString() + " " + httpURLConnection.getResponseMessage())
+            }
+        } catch (e:Exception) {
+            e.printStackTrace()
 
-        } else {
-            httpURLConnection.disconnect()
-            throw IOException(responseCode.toString() + " " + httpURLConnection.getResponseMessage())
+        } finally {
+
         }
-
     }
 
     private fun openConnection(urlStr: String): HttpURLConnection {

@@ -20,8 +20,8 @@ import java.lang.ref.WeakReference
  */
 class Anna(
     private val application: Application,
-    private val host: String?,
-    private val path: String?,
+    internal val host: String?,
+    internal val path: String?,
     internal val strategy: Strategy,
     internal val uploadThreshold: Int,
 
@@ -29,6 +29,8 @@ class Anna(
 ) {
 
     companion object {
+
+        const val DEFAULT_UPLOAD_THRESHOLD = 50
 
         @Volatile
         private var singleton: Anna? = null
@@ -89,25 +91,28 @@ class Anna(
     }
 
     private fun newPageStartEvent(activity: Activity) {
-        val event = Event(EventType.PAGE_START,"" , activity.localClassName)
+        val event = Event(EventType.PAGE_START, "", activity.localClassName)
         dispatcher.dispatchSubmit(event)
     }
 
     private fun newPageStopEvent(activity: Activity) {
-        val event = Event(EventType.PAGE_STOP,"" , activity.localClassName)
+        val event = Event(EventType.PAGE_STOP, "", activity.localClassName)
         dispatcher.dispatchSubmit(event)
     }
 
     private fun newPageStartEvent(fragment: Fragment) {
-
+        val event = Event(EventType.PAGE_START, "", fragment.javaClass.simpleName)
+        dispatcher.dispatchSubmit(event)
     }
 
     private fun newPageStopEvent(fragment: Fragment) {
-
+        val event = Event(EventType.PAGE_STOP, "", fragment.javaClass.simpleName)
+        dispatcher.dispatchSubmit(event)
     }
 
     private fun newEvent(msg: String) {
-
+        val event = Event(EventType.CUSTOM, "", "")
+        dispatcher.dispatchSubmit(event)
     }
 
 
@@ -252,7 +257,7 @@ class Anna(
         private var path: String? = null
         private var strategy: Strategy? = null
         private var uploader: Uploader? = null
-        private var uploadThreshold: Int = 0
+        private var uploadThreshold: Int = DEFAULT_UPLOAD_THRESHOLD
 
         fun server(host: String, path: String): Builder {
             this@Builder.host = host
@@ -265,15 +270,17 @@ class Anna(
             return this
         }
 
-        fun uploader(uploader: Uploader) {
+        fun uploader(uploader: Uploader): Builder {
             this@Builder.uploader = uploader
+            return this
         }
 
         /**
-         * only work when STRATEGY_THRESHOLD
+         * only work when STRATEGY_RELEASE
          */
-        fun uploadThreshold(threshold: Int) {
+        fun uploadThreshold(threshold: Int): Builder {
             this@Builder.uploadThreshold = threshold
+            return this
         }
 
         fun build(): Anna {

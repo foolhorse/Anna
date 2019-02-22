@@ -12,10 +12,13 @@ enum class Strategy {
     OFF,
 
     /**
-     * 存本地数据库
+     * 只发log
      */
     DEBUG,
 
+    /**
+     * 上传服务器
+     */
     RELEASE,
 
 

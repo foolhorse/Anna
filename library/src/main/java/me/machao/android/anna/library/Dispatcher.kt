@@ -75,18 +75,17 @@ class Dispatcher(
 
     private fun performSubmit(event: Event) {
         when (Anna.getInstance().strategy) {
+            Strategy.OFF -> {
+                // do nothing
+            }
             Strategy.DEBUG -> {
-                uploader.upload()
+                log(GSON.toJson(event))
             }
             Strategy.RELEASE -> {
                 pendingEventList.add(event)
                 if (pendingEventList.size > Anna.getInstance().uploadThreshold) {
-                    uploader.upload()
+                    uploader.upload(Anna.getInstance().host + Anna.getInstance().path, GSON.toJson(event))
                 }
-
-            }
-            else -> {
-
             }
         }
     }
