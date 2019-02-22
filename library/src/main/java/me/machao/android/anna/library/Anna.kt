@@ -23,6 +23,8 @@ class Anna(
     private val host: String?,
     private val path: String?,
     internal val strategy: Strategy,
+    internal val uploadThreshold: Int,
+
     private val dispatcher: Dispatcher
 ) {
 
@@ -48,12 +50,14 @@ class Anna(
             return singleton!!
         }
 
+        const val REQUEST_COMPLETE = 1
+
         val HANDLER: Handler = object : Handler(Looper.getMainLooper()) {
             override fun handleMessage(msg: Message) {
                 when (msg.what) {
                     REQUEST_COMPLETE -> {
                         val event = msg.obj as Event
-                        log("target got garbage collected")
+                        log("ok")
                     }
                     else -> throw AssertionError("Unknown handler message received: " + msg.what)
                 }
@@ -66,31 +70,32 @@ class Anna(
 
     }
 
-    private fun newAppCreateEvent(application: Application) {
+    fun newAppCreateEvent(application: Application) {
         val event = Event(EventType.APP_CREATE, application.packageName, null)
         dispatcher.dispatchSubmit(event)
     }
 
-    private fun newAppDestroyEvent(application: Application) {
-
-
+    fun newAppDestroyEvent(application: Application) {
+        val event = Event(EventType.APP_DESTROY, application.packageName, null)
+        dispatcher.dispatchSubmit(event)
     }
 
-    private fun newAppStartEvent(activity: Activity) {
-
+    private fun newAppStartEvent() {
+        dispatcher.dispatchGetPendingFromDb()
     }
 
-    private fun newAppStopEvent(activity: Activity) {
-
-
+    private fun newAppStopEvent() {
+        dispatcher.dispatchSavePendingToDb()
     }
 
     private fun newPageStartEvent(activity: Activity) {
-
+        val event = Event(EventType.PAGE_START,"" , activity.localClassName)
+        dispatcher.dispatchSubmit(event)
     }
 
     private fun newPageStopEvent(activity: Activity) {
-
+        val event = Event(EventType.PAGE_STOP,"" , activity.localClassName)
+        dispatcher.dispatchSubmit(event)
     }
 
     private fun newPageStartEvent(fragment: Fragment) {
@@ -110,8 +115,8 @@ class Anna(
 
 
     init {
-
-        newAppCreateEvent(this@Anna.application)
+//        getPackageInfo()
+//        getPhoneInfo()
 
         val fragmentLifecycleCallbacks = object : android.support.v4.app.FragmentManager.FragmentLifecycleCallbacks() {
 
@@ -181,12 +186,11 @@ class Anna(
 
         this@Anna.application.registerActivityLifecycleCallbacks(object : Application.ActivityLifecycleCallbacks {
 
-
             override fun onActivityCreated(activity: Activity?, savedInstanceState: Bundle?) {
                 if (activity == null) {
                     return
                 }
-                attachFloatView(activity)
+//                attachFloatView(activity)
                 if (activity is android.support.v4.app.FragmentActivity) {
                     activity.supportFragmentManager.registerFragmentLifecycleCallbacks(fragmentLifecycleCallbacks, true)
                 }
@@ -197,7 +201,7 @@ class Anna(
                     return
                 }
                 if (activityRefList.isEmpty()) {
-                    newAppStartEvent(activity)
+                    newAppStartEvent()
                 }
                 activityRefList.add(WeakReference(activity))
                 newPageStartEvent(activity)
@@ -227,7 +231,7 @@ class Anna(
                 activityRefList.removeAll(needRemoveRefList)
 
                 if (activityRefList.isEmpty()) {
-                    newAppStopEvent(activity)
+                    newAppStopEvent()
                 }
 
             }
@@ -248,6 +252,7 @@ class Anna(
         private var path: String? = null
         private var strategy: Strategy? = null
         private var uploader: Uploader? = null
+        private var uploadThreshold: Int = 0
 
         fun server(host: String, path: String): Builder {
             this@Builder.host = host
@@ -264,11 +269,18 @@ class Anna(
             this@Builder.uploader = uploader
         }
 
+        /**
+         * only work when STRATEGY_THRESHOLD
+         */
+        fun uploadThreshold(threshold: Int) {
+            this@Builder.uploadThreshold = threshold
+        }
+
         fun build(): Anna {
             val dispatcher =
                 Dispatcher(application.applicationContext, uploader ?: UrlConnectionUploader(), HANDLER)
 
-            return Anna(application, host, path, strategy ?: Strategy.DEBUG, dispatcher)
+            return Anna(application, host, path, strategy ?: Strategy.DEBUG, uploadThreshold, dispatcher)
         }
 
     }

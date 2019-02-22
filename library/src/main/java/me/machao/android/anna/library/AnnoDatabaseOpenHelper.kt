@@ -8,11 +8,22 @@ import org.jetbrains.anko.db.*
  * Date  2019/2/22
  * @author charliema
  */
-class AnnaDatabaseOpenHelper(ctx: Context) : ManagedSQLiteOpenHelper(ctx, "MyDatabase", null, 1) {
+class AnnaDatabaseOpenHelper(ctx: Context) : ManagedSQLiteOpenHelper(
+    ctx,
+    DB_NAME,
+    null,
+    1
+) {
 
     companion object {
 
-        const val TABLE_NAME ="Event"
+        const val DB_NAME = "Anna"
+
+        const val TABLE_NAME = "Event"
+
+        const val COLUMNS_ID = "id"
+        const val COLUMNS_DATA = "data"
+        const val COLUMNS_TIMESTAMP = "timestamp"
 
 
         private var instance: AnnaDatabaseOpenHelper? = null
@@ -29,17 +40,17 @@ class AnnaDatabaseOpenHelper(ctx: Context) : ManagedSQLiteOpenHelper(ctx, "MyDat
     override fun onCreate(db: SQLiteDatabase) {
         // Here you create tables
         db.createTable(
-            TABLE_NAME ,
+            TABLE_NAME,
             true,
-            "id" to INTEGER + PRIMARY_KEY + UNIQUE,
-            "name" to TEXT,
-            "photo" to BLOB
+            COLUMNS_ID to INTEGER + PRIMARY_KEY + UNIQUE,
+            COLUMNS_DATA to TEXT,
+            COLUMNS_TIMESTAMP to INTEGER
         )
     }
 
     override fun onUpgrade(db: SQLiteDatabase, oldVersion: Int, newVersion: Int) {
         // Here you can upgrade tables, as usual
-        db.dropTable("User", true)
+        db.dropTable(TABLE_NAME, true)
     }
 }
 

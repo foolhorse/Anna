@@ -21,17 +21,21 @@ class Dispatcher(
     private val db: AnnaDatabaseOpenHelper = context.database
 
     private val dispatcherThread = DispatcherThread()
-    private val handler = DispatcherHandler(dispatcherThread.looper, this)
+    private var handler: Handler
 
-    init {
-        dispatcherThread.start()
-    }
+    private val pendingEventList = mutableListOf<Event>()
 
     companion object {
         const val DISPATCHER_THREAD_NAME = "Anna-Dispatcher"
 
         const val EVENT_SUBMIT = 1
+        const val EVENT_SAVE_PENDING_TO_DB = 2
+        const val EVENT_GET_PENDING_FROM_DB = 3
+    }
 
+    init {
+        dispatcherThread.start()
+        handler = DispatcherHandler(dispatcherThread.looper, this)
     }
 
     private class DispatcherThread :
@@ -45,6 +49,12 @@ class Dispatcher(
                     val event = msg.obj as Event
                     dispatcher.performSubmit(event)
                 }
+                EVENT_SAVE_PENDING_TO_DB -> {
+                    dispatcher.performSavePendingToDb()
+                }
+                EVENT_GET_PENDING_FROM_DB -> {
+                    dispatcher.performGetPendingFromDb()
+                }
                 else -> throw AssertionError("Unknown handler message received: " + msg.what)
             }
         }
@@ -54,34 +64,63 @@ class Dispatcher(
         handler.sendMessage(handler.obtainMessage(EVENT_SUBMIT, event))
     }
 
-    private val eventList = mutableListOf<Event>()
+    fun dispatchSavePendingToDb() {
+        handler.sendMessage(handler.obtainMessage(EVENT_SAVE_PENDING_TO_DB))
+    }
+
+    fun dispatchGetPendingFromDb() {
+        handler.sendMessage(handler.obtainMessage(EVENT_GET_PENDING_FROM_DB))
+    }
+
 
     private fun performSubmit(event: Event) {
         when (Anna.getInstance().strategy) {
-            Strategy.REALTIME -> {
+            Strategy.DEBUG -> {
                 uploader.upload()
             }
-            Strategy.THRESHOLD -> {
-                eventList.add(event)
-                db.use {
-                    select(AnnaDatabaseOpenHelper.TABLE_NAME, "name")
-                        .orderBy("id", SqlOrderDirection.ASC)
-                        .exec {
-                            val dbEventList = this.parseList(object : RowParser<Event> {
-                                override fun parseRow(columns: Array<Any?>): Event {
-                                    val data = columns[0] as String
-                                    return gson().fromJson(data, Event::class)
-                                }
-                            })
-                            eventList.addAll(dbEventList)
-                        }
-                    delete(AnnaDatabaseOpenHelper.TABLE_NAME)
+            Strategy.RELEASE -> {
+                pendingEventList.add(event)
+                if (pendingEventList.size > Anna.getInstance().uploadThreshold) {
+                    uploader.upload()
                 }
-                if (eventList.size >= 50) {
 
+            }
+            else -> {
+
+            }
+        }
+    }
+
+    private fun performSavePendingToDb() {
+        db.use {
+            transaction {
+                pendingEventList.forEach {
+                    insert(
+                        AnnaDatabaseOpenHelper.TABLE_NAME,
+                        AnnaDatabaseOpenHelper.COLUMNS_DATA to GSON.toJson(it),
+                        AnnaDatabaseOpenHelper.COLUMNS_TIMESTAMP to it.timestamp
+                    )
                 }
             }
         }
-
     }
+
+    private fun performGetPendingFromDb() {
+        db.use {
+            select(AnnaDatabaseOpenHelper.TABLE_NAME, AnnaDatabaseOpenHelper.COLUMNS_DATA)
+                .orderBy(AnnaDatabaseOpenHelper.COLUMNS_TIMESTAMP, SqlOrderDirection.ASC)
+                .exec {
+                    val dbEventList = this.parseList(object : RowParser<Event> {
+                        override fun parseRow(columns: Array<Any?>): Event {
+                            val data = columns[0] as String
+                            return GSON.fromJson(data, Event::class.java)
+                        }
+                    })
+                    pendingEventList.addAll(dbEventList)
+                }
+            delete(AnnaDatabaseOpenHelper.TABLE_NAME)
+        }
+    }
+
+
 }

@@ -6,5 +6,5 @@ package me.machao.android.anna.library
  */
 interface Uploader {
 
-    fun upload()
+    fun upload(urlStr: String, jsonStr: String)
 }

@@ -12,19 +12,11 @@ enum class Strategy {
     OFF,
 
     /**
-     * 只本地记录
+     * 存本地数据库
      */
     DEBUG,
 
-    /**
-     * 实时上传服务端
-     */
-    REALTIME,
-
-    /**
-     * 到达一定阈值后 threshold 上传服务端
-     */
-    THRESHOLD
+    RELEASE,
 
 
 }
